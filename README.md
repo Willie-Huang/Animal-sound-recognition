@@ -34,7 +34,7 @@ This project builds an end-to-end Python pipeline to recognize animal sounds fro
 SpecAugment (time/freq masking), random time shift, gain jitter, and optional background mixing (Park et al., 2019).
 
 
-## 5. Repository Structure（仓库结构）
+## 5. Repository Structure
 animal-sound-recognition/
 ├─ src/
 │ ├─ datasets.py # ESC-50/UrbanSound8K loaders (librosa)
