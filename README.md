@@ -36,18 +36,18 @@ SpecAugment (time/freq masking), random time shift, gain jitter, and optional ba
 
 ## 5. Repository Structure
 animal-sound-recognition/
-├─ src/
-│ ├─ datasets.py # ESC-50/UrbanSound8K loaders (librosa)
-│ ├─ models.py # CNN/CRNN + PANNs/YAMNet heads
-│ ├─ train.py # training loop, logging, checkpoints
-│ ├─ eval.py # metrics & confusion matrices
-│ └─ utils_audio.py # feature extraction (log-Mel, SpecAug)
-├─ notebooks/ # EDA & error analysis
-├─ data/ # (gitignored)
-├─ results/ # metrics, plots, audio demos
-├─ docs/ # GitHub Pages site
-├─ requirements.txt
-└─ README.md
+- ├─ src/
+- │ ├─ datasets.py # ESC-50/UrbanSound8K loaders (librosa)
+- │ ├─ models.py # CNN/CRNN + PANNs/YAMNet heads
+- │ ├─ train.py # training loop, logging, checkpoints
+- │ ├─ eval.py # metrics & confusion matrices
+- │ └─ utils_audio.py # feature extraction (log-Mel, SpecAug)
+- ├─ notebooks/ # EDA & error analysis
+- ├─ data/ # (gitignored)
+- ├─ results/ # metrics, plots, audio demos
+- ├─ docs/ # GitHub Pages site
+- ├─ requirements.txt
+- └─ README.md
 
 ## 6. Planned Experiments
 **E0. Data hygiene & baselines**  
