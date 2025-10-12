@@ -36,12 +36,14 @@ This project provides an end-to-end sound recognition pipeline: it converts `.wa
 
 ## 3. Datasets
 
+```
 Animals_Sounds/
 ├─ Bear/ bear_001.wav …
 ├─ Cat/
 ├─ Cow/
 ├─ Dog/
 └─ …
+```
 
 > Each subfolder name is treated as a class label.
 
@@ -57,26 +59,30 @@ Animals_Sounds/
 
 ### Model Architecture (Keras Sequential, 1D-CNN)
 
+```
 Conv1D(32, k=3) → BatchNorm → MaxPool → Dropout(0.3)
 Conv1D(64, k=3) → BatchNorm → MaxPool → Dropout(0.3)
 Flatten → Dense(128) → Dropout(0.4) → Dense(num_classes, softmax)
+```
 
 - **Loss**: `sparse_categorical_crossentropy`  
 - **Optimizer**: `adam`
 
 ### Default Hyperparameters
 
+```python
 EPOCHS = 30
 BATCH_SIZE = 32
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
 MAX_LENGTH = 500
 N_MELS = 128
-
+```
 
 ---
 
 ## 5. Installation & Training
+
 ```bash
 # 1) Install dependencies
 pip install -r requirements.txt
@@ -85,83 +91,86 @@ export KERAS_BACKEND=tensorflow
 
 # 2) Train
 python train.py
+```
 
+After completion, `model/` will contain:
+- `animal_sound_model.keras`
+- `label_encoder.pkl`
+- `config.json`
 
-After completion, model/ will contain:
+---
 
-animal_sound_model.keras
-label_encoder.pkl
-config.json
+## 6. Inference
 
-6. Inference
-File mode
+**File mode**
+```bash
 python predict.py --file /path/to/audio.wav
+```
 
-Microphone mode (5 seconds; auto-fallback if PyAudio/permissions are missing)
+**Microphone mode** (5 seconds; auto-fallback if PyAudio/permissions are missing)
+```bash
 python prediction.py
 # Note: If your script is named `Prediction.py` (capital P), run:
 # python Prediction.py
+```
 
+If `animal_pictures/<Label>.jpeg` exists, the image is displayed alongside the prediction.
 
-If animal_pictures/<Label>.jpeg exists, the image is displayed alongside the prediction.
+**macOS tip**: For microphone recording, install PortAudio/PyAudio. If not installed or permission is denied, the command will automatically fall back to a dataset sample without error.
 
-macOS tip: For microphone recording, install PortAudio/PyAudio. If not installed or permission is denied, the command will automatically fall back to a dataset sample without error.
+---
 
-7. Repository Structure
+## 7. Repository Structure
+
+```
 Sound-Animal-Recognition/
-├─ Animals_Sounds/        # Dataset (subfolder = category)
-├─ animal_pictures/       # Optional: <Label>.jpeg per class (Bear.jpeg, Cat.jpeg, ...)
-├─ model/                 # Generated after training
+├─ Animals_Sounds/       # Dataset (subfolder = category)
+├─ animal_pictures/      # Optional: Label.jpeg files
+├─ model/                # Stores trained model and config
 │  ├─ animal_sound_model.keras
 │  ├─ label_encoder.pkl
 │  └─ config.json
-├─ train.py               # Training script
-├─ Prediction.py          # Inference script (microphone/file + fallback)
+├─ train.py              # Training script
+├─ Prediction.py         # Inference script
 ├─ requirements.txt
-└─ temp.wav               # Temp mic recording file (runtime-generated)
+└─ temp.wav              # Temp file (mic audio)
+```
 
-8. Planned Experiments (Roadmap)
+---
 
-Data augmentation: time shift, mixup, SpecAugment (time/freq mask)
+## 8. Planned Experiments (Roadmap)
 
-Model extension: CRNN (Conv + BiGRU), lighter CNN variants
+- **Data augmentation**: time shift, mixup, SpecAugment (time/freq mask)
+- **Model extension**: CRNN (Conv + BiGRU), lighter CNN variants
+- **Transfer learning**: PANNs / YAMNet as embeddings + linear/MLP heads
+- **Cross-dataset generalization**: train-A / test-B robustness evaluation
+- **Edge metrics**: CPU latency, memory usage, model size comparison
 
-Transfer learning: PANNs / YAMNet as embeddings + linear/MLP heads
+---
 
-Cross-dataset generalization: train-A / test-B robustness evaluation
+## 9. Evaluation
 
-Edge metrics: CPU latency, memory usage, model size comparison
+- Test Accuracy, Top-k accuracy
+- Confusion matrix
+- Per-class Precision/Recall
+- ROC-AUC (OvR)
+- Error analysis on easily confused class pairs
 
-9. Evaluation
+---
 
-Test Accuracy, Top-k accuracy
+## 10. Risks, Limitations & Ethics
 
-Confusion matrix
+- **Domain shift**: Field noise may not align with training distribution → adopt augmentation and cross-domain evaluation.
+- **Class imbalance**: Use stratified sampling / loss reweighting.
+- **Responsible use**: Outputs are probabilistic and do not replace bioacoustic expert judgment.
+- **Privacy**: Obtain consent for recordings to avoid uploading restricted material.
 
-Per-class Precision/Recall
+---
 
-ROC-AUC (OvR)
+## References
 
-Error analysis on easily confused class pairs
-
-10. Risks, Limitations & Ethics
-
-Domain shift: Field noise may not align with training distribution → adopt augmentation and cross-domain evaluation.
-
-Class imbalance: Use stratified sampling / loss reweighting.
-
-Responsible use: Outputs are probabilistic and do not replace bioacoustic expert judgment.
-
-Privacy: Obtain consent for recordings to avoid uploading restricted material.
-
-References
-
-Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.
-
-McFee, B., et al. (2015). librosa: Audio and Music Signal Analysis in Python.
-
-Park, D. S., et al. (2019). SpecAugment.
-
-Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks.
-
-YAMNet / AudioSet (Google Research).
+- Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.
+- McFee, B., et al. (2015). librosa: Audio and Music Signal Analysis in Python.
+- Park, D. S., et al. (2019). SpecAugment.
+- Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks.
+- YAMNet / AudioSet (Google Research).
