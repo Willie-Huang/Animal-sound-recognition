@@ -1,110 +1,95 @@
 # Animal Sound Recognition 
 
-> A noise-robust, lightweight pipeline for classifying animal sounds with log-Mel spectrograms and CNN/CRNN backbones, plus transfer learning from audio foundation models.
+> A lightweight, noise-tolerant pipeline that classifies animal sounds from short audio clips using log-Mel features and a compact 1D-CNN. Supports microphone inference with automatic dataset fallback when PyAudio is unavailable.
 
 ## 1. Overview
-This project builds an end-to-end Python pipeline to recognize animal sounds from short audio clips. A baseline model uses log-Mel spectrograms with a compact CNN; stretch goals explore CRNNs and transfer learning (e.g., PANNs, YAMNet). Passive acoustic monitoring enables scalable wildlife surveys and long-term ecosystem tracking (Piczak, 2015; Salamon & Bello, 2014). We focus on practical robustness under field noise with principled augmentations and cross-dataset evaluation (McFee et al., 2015; Park et al., 2019; Kong et al., 2020).
+This project provides an end-to-end sound recognition pipeline: It converts .wav/.ogg audio files to 16 kHz, extracts 128-dimensional log-Mel spectrum sequences, pads/truncates them at a fixed time step (500 frames), and feeds them into a small Conv1D model for classification. Training saves the model (.keras), label encoder (.pkl), and configuration (config.json). Inference strictly reuses the same set of features and configuration to ensure reproducibility.
 
 ## 2. Objectives
-1. **Baseline**: Train a CNN on ESC-50 animal classes using log-Mel inputs.  
-2. **Noise robustness**: Add SpecAugment, time shift, and mixup to handle field noise.  
-3. **Transfer learning**: Evaluate PANNs/YAMNet embeddings and fine-tuning for few-shot gains.  
-4. **Evaluation**: Report macro-F1, ROC-AUC; provide confusion matrices and ablations.  
-5. **Edge demo (stretch)**: Export to TFLite/ONNX for on-device inference.
+Baseline: An ESC-style classifier based on 128-Mel + Conv1D, CPU-friendly and easy to train.
+Robust Inference: Prioritizes 5s of microphone recording; if PyAudio is missing or permissions are unavailable, it automatically falls back to the first audio in the dataset for demonstration.
+Reproducibility: Training and inference share a standardized, hyper-participatory approach, with artifacts persisted to model/.
 
 ## 3. Datasets
-- **ESC-50 (animal subset)** — curated environmental sounds across 50 classes (Piczak, 2015).  
-- **UrbanSound8K** — urban sounds incl. animal-related classes; good for robustness baselines (Salamon & Bello, 2014).  
-- **Bird-centric (stretch)** — BirdCLEF / Cornell birdcall corpora for fine-grained species recognition.  
-> Tooling: `librosa` for audio I/O and feature extraction (McFee et al., 2015).
+Animals_Sounds/
+├─ Bear/      bear_001.wav …
+├─ Cat/
+├─ Cow/
+├─ Dog/
+└─ …
 
 ## 4. Methods
-### 4.1 Pre-processing
-- Resample to 16 kHz mono → pre-emphasis → framing → **log-Mel spectrogram** (64–128 mels).  
-- Per-file standardization; optional VAD/energy gating for silence trimming.
+Feature pipeline (training and inference are consistent)
 
-### 4.2 Models
-- **CNN-Small (baseline)**: 3–5 conv blocks → global pooling → softmax.  
-- **CRNN (stretch)**: 2D CNN feature extractor + GRU for temporal context.  
-- **Foundation models**:  
-  - **PANNs** (AudioSet-pretrained; CNN14/ResNet variants) for embeddings / fine-tune.  
-  - **YAMNet** (MobileNet-v1 trunk; 521 AudioSet classes) as embedding front-end.
+Resampling: SR=16000
 
-### 4.3 Data Augmentation
-SpecAugment (time/freq masking), random time shift, gain jitter, and optional background mixing (Park et al., 2019).
+Mel spectrum: n_mels=128, n_fft=1024, hop=512
 
+After dB conversion, normalize each sample and band (subtract mean/divide standard deviation)
+
+pad_sequences(maxlen=500, padding='post', truncating='post')
+
+Model architecture (Keras Sequential, 1D-CNN)
+
+Conv1D(32, k=3) → BN → MaxPool → Dropout(0.3)
+
+Conv1D(64, k=3) → BN → MaxPool → Dropout(0.3)
+
+Flatten → Dense(128) + Dropout(0.4) → Dense(num_classes, softmax)
+
+Loss: sparse_categorical_crossentropy; Optimizer: adam
+
+Default hyperparameters: EPOCHS=30, BATCH_SIZE=32, TEST_SIZE=0.2, RANDOM_STATE=42, MAX_LENGTH=500, N_MELS=128
+
+Installation and Training
+
+pip install -r requirements.txt
+# Optional: export KERAS_BACKEND=tensorflow
+python train.py
+After completion, the following will be generated in model/ :
+animal_sound_model.keras, label_encoder.pkl, config.json
+Inference (two modes)
+
+# File mode
+python predict.py --file /path/to/audio.wav
+
+# Microphone mode (5 seconds). If PyAudio/permissions are missing, the command will automatically fall back to the dataset sample.
+python prediction.py
+If animal_pictures/<Label>.jpeg exists, the image will be displayed.
+macOS Tip: To enable microphone recording, install PortAudio/PyAudio first; otherwise, running the command directly will automatically fall back without an error.
 
 ## 5. Repository Structure
-animal-sound-recognition/
-- ├─ src/
-- │ ├─ datasets.py # ESC-50/UrbanSound8K loaders (librosa)
-- │ ├─ models.py # CNN/CRNN + PANNs/YAMNet heads
-- │ ├─ train.py # training loop, logging, checkpoints
-- │ ├─ eval.py # metrics & confusion matrices
-- │ └─ utils_audio.py # feature extraction (log-Mel, SpecAug)
-- ├─ notebooks/ # EDA & error analysis
-- ├─ data/ # (gitignored)
-- ├─ results/ # metrics, plots, audio demos
-- ├─ docs/ # GitHub Pages site
-- ├─ requirements.txt
-- └─ README.md
+Sound-Animal-Recognition/
+├─ Animals_Sounds/ # Dataset (subfolder = category)
+├─ animal_pictures/ # Optional: Images with the same name as the category (Bear.jpeg, Cat.jpeg, ...)
+├─ model/ # Model and configuration generated after training
+│ ├─ animal_sound_model.keras
+│ ├─ label_encoder.pkl
+│ └─ config.json
+├─ train.py # Training script
+├─ Prediction.py # Inference script (microphone/file + fallback)
+├─ requirements.txt
+└─ temp.wav # Temporary microphone recording file (generated at runtime)
 
 ## 6. Planned Experiments
-**E0. Data hygiene & baselines**  
-- Curate ESC-50 animal subset; stratified train/val/test (use official folds when applicable).  
-- Train **CNN-Small** on log-Mel inputs; record macro-F1 / ROC-AUC.
-
-**E1. Augmentation ablations**  
-- Compare **No-Aug** vs **SpecAugment** vs **SpecAugment + time-shift + mixup**.  
-- Hypothesis H1: SpecAugment improves macro-F1, especially for minority animal classes (Park et al., 2019).
-
-**E2. Model family comparison**  
-- CNN-Small vs **CRNN**.  
-- Hypothesis H2: CRNN improves per-class recall for temporally variable calls.
-
-**E3. Transfer learning**  
-- **PANNs embeddings** (frozen) + linear probe; then partial fine-tuning.  
-- **YAMNet embeddings** + linear probe / adapter.  
-- Hypothesis H3: Transfer models yield higher macro-F1 in low-data regimes (Kong et al., 2020).
-
-**E4. Robustness & domain shift**  
-- Add **UrbanSound8K** animal-related clips as out-of-domain noise.  
-- Train on ESC-50; test on held-out noisy splits (cross-dataset).  
-- Hypothesis H4: Augmented training narrows the performance gap under domain shift.
-
-**E5. Few-shot stress test (stretch)**  
-- Downsample per-class training to K ∈ {1, 5, 10} shots; compare baselines vs transfer.  
-- Measure accuracy vs K-shots to quantify data efficiency.
-
-**E6. Inference efficiency (stretch)**  
-- Measure latency and model size; evaluate ONNX/TFLite exports for edge feasibility.
+Data augmentation: time shift, mixup, SpecAugment (time/freq mask)
+Model extension: CRNN (Conv + BiGRU), lighter CNN variants
+Transfer learning: PANNs/YAMNet as embeddings + linear/MLP heads
+Cross-dataset generalization: train-A/test-B robustness evaluation
+Edge metrics: CPU latency, memory usage, model size comparison
 
 ## 7. Evaluation
-- **Primary metrics**: **Macro-F1** (class imbalance-aware), **macro ROC-AUC**.  
-- **Secondary**: mAP, per-class F1/Recall, confusion matrix, PR curves.  
-- **Validation protocol**:  
-  - Use official **ESC-50 5-fold CV** where applicable to avoid leakage (Piczak, 2015).  
-  - Report **mean ± std** across folds and random seeds.  
-- **Statistical testing**: Paired t-test or Wilcoxon signed-rank on per-fold metrics for key comparisons (e.g., No-Aug vs SpecAugment; CNN vs CRNN; baseline vs PANNs/YAMNet).  
-- **Robustness checks**: Evaluate under SNR degradation (additive noise at {20, 10, 0 dB}); report **degradation curves** of macro-F1 vs SNR.  
-- **Error analysis**:  
-  - Top-k confusion pairs (e.g., similar timbres).  
-  - Saliency/Grad-CAM on spectrograms to verify model focus on harmonics/formants vs background.  
-- **Model efficiency**: Params, FLOPs, latency (CPU-only and GPU), and model size; summarize in a single comparison table.
-
----
+Test Accuracy, confusion matrix, per-class precision/recall, ROC-AUC (OvR), Top-k accuracy, and analysis of easily confused class pairs.
 
 ## 8. Risks, Limitations & Ethics
-- **Class imbalance / noise**: weighted loss, re-sampling, stronger augmentation.  
-- **Domain shift**: curated vs field recordings; apply background mixing, cross-dataset tests.  
-- **Licensing & ethics**: respect dataset licenses; avoid misuse for hunting/harassment; anonymize sensitive location metadata.
-
----
+Domain shift: Field noise may not align with the training distribution → Enhancement and cross-domain evaluation are required.
+Class imbalance: Stratified sampling/loss reweighting can be used.
+Responsible use: Output is a probabilistic prediction and does not replace bioacoustic expert judgment.
+Privacy compliance: Requires consent for recordings to avoid uploading restricted material.
 
 ## References
-- Gemmeke, J. F., Ellis, D. P. W., Freedman, D., Jansen, A., Lawrence, W., Moore, R. C., & Plakal, M. (2017). Audio Set: An ontology and human-labeled dataset for audio events. *IEEE ICASSP 2017*, 776–780.  
-- Kong, Q., Cao, Y., Iqbal, T., Wang, Y., Plumbley, M. D., & Wang, W. (2020). PANNs: Large-scale pretrained audio neural networks for audio pattern recognition. *IEEE/ACM Transactions on Audio, Speech, and Language Processing*, 28, 2880–2894.  
-- McFee, B., Raffel, C., Liang, D., Ellis, D. P. W., McVicar, M., Battenberg, E., & Nieto, O. (2015). librosa: Audio and music signal analysis in Python. In *Proceedings of the 14th Python in Science Conference* (pp. 18–24).  
-- Park, D. S., Chan, W., Zhang, Y., Chiu, C.-C., Zoph, B., Cubuk, E. D., & Le, Q. V. (2019). SpecAugment: A simple data augmentation method for automatic speech recognition. *INTERSPEECH 2019*, 2613–2617.  
-- Piczak, K. J. (2015). ESC: Dataset for environmental sound classification. In *Proceedings of the 23rd ACM International Conference on Multimedia* (pp. 1015–1018).  
-- Salamon, J., & Bello, J. P. (2014). A dataset and taxonomy for urban sound research. In *Proceedings of the 22nd ACM International Conference on Multimedia* (pp. 1041–1044).
+1. Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.
+2. McFee, B., et al. (2015). librosa: Audio and Music Signal Analysis in Python.
+3. Park, D. S., et al. (2019). SpecAugment.
+4. Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks.
+5. YAMNet / AudioSet (Google Research).
