@@ -93,7 +93,7 @@ MAX_LENGTH = 500
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
 
-## 5.Installation & Training
+5. Installation & Training
 # 1) Install dependencies
 pip install -r requirements.txt
 export KERAS_BACKEND=tensorflow
