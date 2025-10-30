@@ -1,6 +1,6 @@
 # Animal Sound Recognition
 
-> A lightweight, noise-tolerant pipeline that classifies animal sounds from short audio clips using log-Mel features and a compact 1D-CNN. Supports microphone inference with automatic dataset fallback when PyAudio is unavailable.
+> A progressively enhanced, noise-tolerant pipeline that classifies animal sounds from short audio clips using log-Mel features and a family of CNN and Transformer models. The project begins with a **1D-CNN baseline (~45% accuracy)** and advances to **Transformer and SimCLR-based architectures (~74% accuracy)**. Supports microphone inference with dataset fallback when PyAudio is unavailable.
 
 ---
 
@@ -23,29 +23,41 @@
 ---
 
 ## 1. Overview
-This project provides an end-to-end sound recognition pipeline: it converts `.wav`/`.ogg` audio files to **16 kHz**, extracts **128-dimensional log-Mel** sequences, pads/truncates to a fixed length (**500 frames**), and feeds them into a small **Conv1D** model for classification. Training saves the model (`.keras`), label encoder (`.pkl`), and configuration (`config.json`). Inference strictly reuses the same features and configuration to ensure reproducibility.
+This repository provides an end-to-end **animal sound recognition system**.  
+It transforms raw `.wav` files into **128-dimensional log-Mel spectrograms**, normalizes each sample, and feeds them into a series of deep models ranging from a **1D convolutional baseline** to **Transformer encoders** with **SimCLR self-supervised pretraining** and **ProtoNet fine-tuning**.  
+The pipeline supports training, model export (`.keras`), and real-time microphone inference with automatic fallback if PyAudio is unavailable.
 
 ---
 
 ## 2. Objectives
-- **Baseline**: An ESC-style classifier based on **128-Mel + Conv1D**, CPU-friendly and easy to train.  
-- **Robust inference**: Prioritize **5 s** of microphone recording; if PyAudio is missing or permissions are unavailable, automatically fall back to the first audio in the dataset for demonstration.  
-- **Reproducibility**: Training and inference share a standardized pipeline, with artifacts persisted to `model/`.
+- **Establish a Baseline**: Implement a small and efficient **1D-CNN** model using log-Mel features.  
+- **Enhance Robustness**: Improve classification under **wind and environmental noise** through SNR-controlled augmentation.  
+- **Representation Learning**: Incorporate **SimCLR** and **Prototypical Networks** to improve generalization in few-shot conditions.  
+- **Model Evaluation**: Compare 1D-CNN, AlexNet, MobileNetV2, and Transformer-based models on small, imbalanced datasets.  
+- **Ease of Use**: Enable one-command training and inference with reproducible outputs in the `model/` directory.  
 
 ---
 
 ## 3. Datasets
 
-```
 Animals_Sounds/
-├─ Bear/ bear_001.wav …
-├─ Cat/
-├─ Cow/
-├─ Dog/
-└─ …
-```
+├─ Training/
+│ ├─ Bear/
+│ ├─ Cat/
+│ ├─ Cow/
+│ ├─ Dog/
+│ └─ ...
+├─ Test/
+│ ├─ Bear/
+│ ├─ Cat/
+│ ├─ Cow/
+│ ├─ Dog/
+│ └─ ...
+└─ Noise/
+└─ wind/
 
-> Each subfolder name is treated as a class label.
+> Each subfolder represents one class label.  
+> Wind noise clips are used for **training augmentation only** (not for testing).
 
 ---
 
@@ -54,123 +66,128 @@ Animals_Sounds/
 ### Feature Pipeline
 - **Resampling**: `sr = 16000`  
 - **Mel spectrogram**: `n_mels = 128`, `n_fft = 1024`, `hop_length = 512`  
-- **Post-processing**: dB conversion → per-sample, per-band normalization (subtract mean / divide std)  
-- **Sequence shaping**: `pad_sequences(maxlen=500, padding='post', truncating='post')`
+- **Post-processing**: Power→dB conversion, per-sample z-normalization  
+- **Sequence shaping**: `pad_sequences(maxlen=500, padding='post', truncating='post')`  
 
-### Model Architecture (Keras Sequential, 1D-CNN)
-
-```
+### Model Architecture
+**Baseline 1D-CNN**
 Conv1D(32, k=3) → BatchNorm → MaxPool → Dropout(0.3)
 Conv1D(64, k=3) → BatchNorm → MaxPool → Dropout(0.3)
 Flatten → Dense(128) → Dropout(0.4) → Dense(num_classes, softmax)
-```
 
-- **Loss**: `sparse_categorical_crossentropy`  
-- **Optimizer**: `adam`
+**Variants**
+- **MixNoise_1D_CNN**: baseline + naive wind-mixing (0–20 dB SNR).  
+- **AlexNet-Mel (2D CNN)**: large image-style architecture on spectrograms.  
+- **Transformer + SimCLR + ProtoNet**: uses self-supervised contrastive learning followed by few-shot fine-tuning.  
+- **Enhanced_1D_CNN (Best)**: baseline + calibrated noise augmentation, SpecAugment, class weights, and higher dropout.
 
 ### Default Hyperparameters
-
 ```python
 EPOCHS = 30
 BATCH_SIZE = 32
+SR = 16000
+N_MELS = 128
+N_FFT = 1024
+HOP = 512
+MAX_LENGTH = 500
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
-MAX_LENGTH = 500
-N_MELS = 128
-```
 
----
-
-## 5. Installation & Training
-
-```bash
+## 5.Installation & Training
 # 1) Install dependencies
 pip install -r requirements.txt
-# Optional: choose TF backend for Keras
 export KERAS_BACKEND=tensorflow
 
-# 2) Train
-python train.py
-```
+# 2) Train (choose model variant)
+python baseline.py
+python mix_noise.py
+python "train AlexNet.py"
+python "enhance transformer.py"
+python enhance.py
 
-After completion, `model/` will contain:
-- `animal_sound_model.keras`
-- `label_encoder.pkl`
-- `config.json`
+After completion, model/ will contain:
 
----
+animal_sound_model.keras
 
-## 6. Inference
+label_encoder.pkl
 
-**File mode**
-```bash
+config.json
+
+Evaluation CSVs (classification report, confusion matrix)
+
+## 6.Inference
+File mode
+
 python predict.py --file /path/to/audio.wav
-```
 
-**Microphone mode** (5 seconds; auto-fallback if PyAudio/permissions are missing)
-```bash
+
+Microphone mode
+
 python prediction.py
-# Note: If your script is named `Prediction.py` (capital P), run:
-# python Prediction.py
-```
+# or if capitalized:
+python Prediction.py
 
-If `animal_pictures/<Label>.jpeg` exists, the image is displayed alongside the prediction.
 
-**macOS tip**: For microphone recording, install PortAudio/PyAudio. If not installed or permission is denied, the command will automatically fall back to a dataset sample without error.
-
----
+If microphone permissions are unavailable, the program automatically falls back to a dataset audio sample.
+On macOS, install PortAudio/PyAudio for live recording.
 
 ## 7. Repository Structure
-
-```
 Sound-Animal-Recognition/
-├─ Animals_Sounds/       # Dataset (subfolder = category)
-├─ animal_pictures/      # Optional: Label.jpeg files
-├─ model/                # Stores trained model and config
-│  ├─ animal_sound_model.keras
-│  ├─ label_encoder.pkl
-│  └─ config.json
-├─ train.py              # Training script
-├─ Prediction.py         # Inference script
+├─ Animals_Sounds/
+│  ├─ Training/
+│  ├─ Test/
+│  └─ Noise/
+├─ charts/
+│  ├─ chart1_precision_per_class.png
+│  ├─ chart2_recall_per_class.png
+│  ├─ chart3_f1_per_class.png
+│  ├─ chart4_test_accuracy.png
+│  └─ chart5_macro_vs_weighted_f1.png
+├─ baseline.py
+├─ mix_noise.py
+├─ enhance.py
+├─ enhance transformer.py
+├─ train AlexNet.py
+├─ Prediction.py
 ├─ requirements.txt
-└─ temp.wav              # Temp file (mic audio)
-```
-
----
-
+└─ model/
 ## 8. Planned Experiments (Roadmap)
 
-- **Data augmentation**: time shift, mixup, SpecAugment (time/freq mask)
-- **Model extension**: CRNN (Conv + BiGRU), lighter CNN variants
-- **Transfer learning**: PANNs / YAMNet as embeddings + linear/MLP heads
-- **Cross-dataset generalization**: train-A / test-B robustness evaluation
-- **Edge metrics**: CPU latency, memory usage, model size comparison
+Augmentation: SpecAugment, mixup, gain jitter, and pitch shift.
 
----
+Architecture: CRNN (Conv+BiGRU), Transformer-light, MobileNetV2 embedding head.
+
+Loss and Fairness: Focal loss, label smoothing, and class-balanced sampling.
+
+Cross-domain Testing: Train on one noise domain, test on another.
+
+Deployment: Quantized TFLite/CoreML model for mobile inference.
 
 ## 9. Evaluation
 
-- Test Accuracy, Top-k accuracy
-- Confusion matrix
-- Per-class Precision/Recall
-- ROC-AUC (OvR)
-- Error analysis on easily confused class pairs
-
----
-
 ## 10. Risks, Limitations & Ethics
+Domain shift: Real-world noise differs from training data; mitigated through cross-domain evaluation.
 
-- **Domain shift**: Field noise may not align with training distribution → adopt augmentation and cross-domain evaluation.
-- **Class imbalance**: Use stratified sampling / loss reweighting.
-- **Responsible use**: Outputs are probabilistic and do not replace bioacoustic expert judgment.
-- **Privacy**: Obtain consent for recordings to avoid uploading restricted material.
+Imbalanced data: Small sample sizes per class require reweighting or resampling.
 
----
+Overfitting risk: Use dropout, data augmentation, and early stopping.
+
+Ethical use: Predictions are probabilistic; not a substitute for expert bioacoustic analysis.
+
+Privacy: Ensure recorded samples comply with local data protection laws.
 
 ## References
-
-- Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.
-- McFee, B., et al. (2015). librosa: Audio and Music Signal Analysis in Python.
-- Park, D. S., et al. (2019). SpecAugment.
-- Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks.
-- YAMNet / AudioSet (Google Research).
+1. Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.
+2. McFee, B., et al. (2015). librosa: Audio and Music Signal Analysis in Python.
+3. Park, D. S., et al. (2019). SpecAugment: A Simple Data Augmentation Method for ASR.
+4. Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition.
+5. Gemmeke, J. F., et al. (2017). AudioSet: An Ontology and Human-Labeled Dataset for Audio Events.
+6. Chen, T., et al. (2020). SimCLR: A Simple Framework for Contrastive Learning of Visual Representations.
+7. Snell, J., et al. (2017). Prototypical Networks for Few-shot Learning.
+8. Bardes, A., et al. (2022). VICReg: Variance-Invariance-Covariance Regularization for SSL.
+9. Gong, Y., et al. (2021). AST: Audio Spectrogram Transformer.
+10. Krizhevsky, A., et al. (2012). ImageNet Classification with Deep Convolutional Neural Networks (AlexNet).
+11. Sandler, M., et al. (2018). MobileNetV2: Inverted Residuals and Linear Bottlenecks.
+12. Lin, T.-Y., et al. (2017). Focal Loss for Dense Object Detection.
+13. Kingma, D. P., & Ba, J. (2015). Adam: A Method for Stochastic Optimization.
+14. Dosovitskiy, A., et al. (2021). An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale (ViT).
