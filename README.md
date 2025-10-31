@@ -1,9 +1,11 @@
 # Animal Sound Recognition
 
 > This project explores effective model and data-handling strategies for animal sound recognition on small and imbalanced datasets. Starting from a 1D-CNN baseline, the work systematically investigates how different architectures (AlexNet, Transformer) and augmentation strategies affect performance under limited data conditions.
-The primary challenge addressed is achieving robustness and generalization when training data is scarce and unevenly distributed. Simple noise-mixing—randomly adding wind sounds—was initially used to simulate real-world interference but led to data collapse, revealing that uncontrolled augmentation can distort class distributions.
+
+>The primary challenge addressed is achieving robustness and generalization when training data is scarce and unevenly distributed. Simple noise-mixing—randomly adding wind sounds—was initially used to simulate real-world interference but led to data collapse, revealing that uncontrolled augmentation can distort class distributions.
 To mitigate this, a calibrated noise-augmentation scheme was introduced, coupled with normalization and dropout adjustments. While complex models such as Transformers or AlexNet provided higher capacity, they exhibited severe overfitting on small datasets, offering minimal test accuracy improvement. Moreover, the more complex the model needs to be deployed, the more cumbersome the program is, the local configuration requirements are too high, and the training time is longer, so it is not suitable for small data set training and learning.
-The final system demonstrates that moderate complexity networks with carefully designed augmentation and regularization outperform larger architectures, offering a balanced solution between accuracy, stability, and generalization for real-world small-sample bioacoustic tasks.
+
+>The final system demonstrates that moderate complexity networks with carefully designed augmentation and regularization outperform larger architectures, offering a balanced solution between accuracy, stability, and generalization for real-world small-sample bioacoustic tasks.
 
 ---
 
