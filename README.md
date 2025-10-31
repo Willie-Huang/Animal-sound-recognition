@@ -2,7 +2,7 @@
 
 > This project explores effective model and data-handling strategies for animal sound recognition on small and imbalanced datasets. Starting from a 1D-CNN baseline, the work systematically investigates how different architectures (AlexNet, Transformer) and augmentation strategies affect performance under limited data conditions.
 The primary challenge addressed is achieving robustness and generalization when training data is scarce and unevenly distributed. Simple noise-mixing—randomly adding wind sounds—was initially used to simulate real-world interference but led to data collapse, revealing that uncontrolled augmentation can distort class distributions.
-To mitigate this, a calibrated noise-augmentation scheme was introduced, coupled with normalization and dropout adjustments. While complex models such as Transformers or AlexNet provided higher capacity, they exhibited severe overfitting on small datasets, offering minimal test accuracy improvement.
+To mitigate this, a calibrated noise-augmentation scheme was introduced, coupled with normalization and dropout adjustments. While complex models such as Transformers or AlexNet provided higher capacity, they exhibited severe overfitting on small datasets, offering minimal test accuracy improvement. Moreover, the more complex the model needs to be deployed, the more cumbersome the program is, the local configuration requirements are too high, and the training time is longer, so it is not suitable for small data set training and learning.
 The final system demonstrates that moderate complexity networks with carefully designed augmentation and regularization outperform larger architectures, offering a balanced solution between accuracy, stability, and generalization for real-world small-sample bioacoustic tasks.
 
 ---
@@ -165,11 +165,11 @@ Sound-Animal-Recognition/
 ## 9. Evaluation
 | Model Variant | Test Accuracy | Weighted F1 |
 |----------------|---------------|--------------|
-| Baseline_1D_CNN | 0.45 | 0.44 |
-| MixNoise_1D_CNN | 0.47 | 0.47 |
-| AlexNet-Mel | 0.55 | 0.54 |
-| Transformer + SimCLR | 0.61 | 0.62 |
-| **Enhanced_1D_CNN (Best)** | **0.74** | **0.74** |
+| Baseline_1D_CNN | 44.62% | 44% |
+| MixNoise_1D_CNN | 47.69%~50% | 47% |
+| AlexNet-Mel | 55.38% | 54% |
+| Transformer + SimCLR | 61.54% | 62% |
+| **Enhanced_1D_CNN (Best)** | **73.95%** | **74%** |
 
 ---
 
