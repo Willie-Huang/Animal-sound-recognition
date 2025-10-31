@@ -1,6 +1,9 @@
 # Animal Sound Recognition
 
-> A progressively enhanced, noise-tolerant pipeline that classifies animal sounds from short audio clips using log-Mel features and a family of CNN and Transformer models. The project begins with a **1D-CNN baseline (~45% accuracy)** and advances to **Transformer and SimCLR-based architectures (~74% accuracy)**. Supports microphone inference with dataset fallback when PyAudio is unavailable.
+> This project explores effective model and data-handling strategies for animal sound recognition on small and imbalanced datasets. Starting from a 1D-CNN baseline, the work systematically investigates how different architectures (AlexNet, Transformer) and augmentation strategies affect performance under limited data conditions.
+The primary challenge addressed is achieving robustness and generalization when training data is scarce and unevenly distributed. Simple noise-mixing—randomly adding wind sounds—was initially used to simulate real-world interference but led to data collapse, revealing that uncontrolled augmentation can distort class distributions.
+To mitigate this, a calibrated noise-augmentation scheme was introduced, coupled with normalization and dropout adjustments. While complex models such as Transformers or AlexNet provided higher capacity, they exhibited severe overfitting on small datasets, offering minimal test accuracy improvement.
+The final system demonstrates that moderate complexity networks with carefully designed augmentation and regularization outperform larger architectures, offering a balanced solution between accuracy, stability, and generalization for real-world small-sample bioacoustic tasks.
 
 ---
 
