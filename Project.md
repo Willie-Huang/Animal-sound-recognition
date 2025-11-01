@@ -86,7 +86,7 @@ The models are evaluated on Accuracy, Weighted F1, and per-class Precision/Recal
 | Model Variant               | Test Accuracy | Weighted F1 | Observations |
 |----------------------------|---------------|-------------|--------------|
 | 1D-CNN Baseline            | 0.45          | 0.44        | Stable but limited generalization |
-| + Naive Wind Mixing        | 0.47          | 0.47        | Slight gain; unstable behaviour from uncontrolled SNR |
+| + Naive Wind Noise         | 0.47          | 0.47        | Slight gain; unstable behaviour from uncontrolled SNR |
 | AlexNet-Mel                | 0.55          | 0.54        | Higher capacity but overfits; sensitive to class imbalance |
 | Transformer-Mel            | 0.61          | 0.62        | Strong training fit; weaker real-world generalization |
 | **Enhanced 1D-CNN (Ours)** | **0.74**      | **0.74**    | Best overall balance of robustness, simplicity, and stability |
