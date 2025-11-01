@@ -86,7 +86,7 @@ The models are evaluated on Accuracy, Weighted F1, and per-class Precision/Recal
 
 ---
 
-### 4.2 Per-Class Behaviour Analysis (Figures 1–3)
+### 4.2 Per-Class Behaviour Analysis 
 
 To investigate why overall accuracy diverges across models, per-class precision, recall, and F1-scores were computed.  
 Figures 1–3 compare five architectures across 12 animal classes.
@@ -113,11 +113,11 @@ Figures 1–3 compare five architectures across 12 animal classes.
 
 ---
 
-### 4.3 Global Performance Comparison (Figures 4–5)
+### 4.3 Global Performance Comparison 
 
 <p align="center">
-  <img src="image/chart4_test_accuracy.png" width="700">
-  <img src="image/chart5_macro_vs_weighted_f1" width="700">
+  <img src="image/chart4_test_accuracy.png" style="max-width:100%; width:700px;" alt="Test Accuracy — Five Models"><br>
+  <img src="image/chart5_macro_vs_weighted_f1.png" style="max-width:100%; width:700px;" alt="Macro vs Weighted F1 — Five Models">
 </p>
 
 #### Interpretation
