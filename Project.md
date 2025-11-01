@@ -20,24 +20,31 @@
 
 ## 1. Introduction
 
-This project targets animal sound recognition under small and imbalanced data constraints. Starting from a compact 1D-CNN baseline, we systematically examine how model capacity (AlexNet-Mel, Transformer) and augmentation strategies affect robustness. Early trials with naive wind-noise mixing revealed data collapse: when SNR and mixing policy are uncontrolled, the added noise dominates class cues and distorts the label distribution, causing severe overfitting and unstable validation curves.
+This project targets animal sound recognition under small and imbalanced data constraints. It begins with a compact 1D-CNN baseline and systematically examines how model capacity (AlexNet-Mel, Transformer) and augmentation strategies influence robustness. Initial experiments using naïve wind-noise mixing exposed a data collapse problem—uncontrolled SNR levels and random mixing caused noise to overpower class cues, distort label balance, and produce unstable validation trends.
 
-To address this, we introduce a calibrated pipeline: standardized log-Mel features (16 kHz, 128 Mel), per-sample z-norm, SpecAugment, class weighting, and early stopping. Heavy models (AlexNet, Transformer) show high capacity but limited test gains on small data and longer training/infra cost. Our final system shows that moderate-capacity CNNs with calibrated augmentation deliver the best accuracy–stability trade-off, reaching 0.74 test accuracy while remaining reproducible and deployable on CPU.
+To overcome this, a calibrated processing pipeline was designed: 128-bin log-Mel features (16 kHz), per-sample z-normalization, SpecAugment, class-weight rebalancing, and early stopping. Although AlexNet and Transformer offer higher representational power, they show limited test gains, long training times, and heavy hardware demand under small data conditions. The final enhanced 1D-CNN achieves a balanced accuracy–stability trade-off, reaching 0.74 test accuracy with reproducible results and efficient CPU deployment, demonstrating that carefully regularized mid-capacity models outperform deeper ones on limited datasets.
 
 ---
 
 ## 2. Literature Review
 
-Previous studies in environmental sound classification (ESC) have established log-Mel features and convolutional networks as reliable backbones for audio pattern recognition (Piczak, 2015; McFee et al., 2015). Deep architectures such as AlexNet (Krizhevsky et al., 2012) and PANNs (Kong et al., 2020) achieve high accuracy on large datasets like AudioSet (Gemmeke et al., 2017), but they depend heavily on abundant labeled data and extensive compute resources.
+After building the baseline 1D-CNN classifier, the core objective of this project became understanding what combination of model architecture and data-handling strategy is truly suitable for small, imbalanced animal-sound datasets. The baseline network provided a useful reference point (~0.45 accuracy), but its behaviour exposed two fundamental issues: 
+(1) minority classes were consistently misclassified
+(2) the model was extremely sensitive to background noise, suggesting poor feature generalization.
 
-To enhance generalization in low-resource conditions, recent works employ data augmentation and self-supervised learning. SpecAugment (Park et al., 2019) applies time–frequency masking, while mixup (Zhang et al., 2018) interpolates examples to smooth decision boundaries. Contrastive methods such as SimCLR (Chen et al., 2020) and VICReg (Bardes et al., 2022) learn invariant representations without labels, and Prototypical Networks (Snell et al., 2017) improve few-shot adaptation.
+The first modification focused on augmentation rather than architecture. A naive strategy was implemented: randomly mixing wind noise into every training clip. However, because the SNR range was uncontrolled, the injected noise frequently dominated the acoustic energy, masking formant and harmonic structures that define species identity. The result was a data-collapse phenomenon, where latent features across different classes became nearly indistinguishable, leading to unstable validation curves and F1 drops in minority labels such as Monkey, Sheep, and Pig. This failure demonstrated that “more augmentation” is not automatically “better augmentation.”
 
-Despite these advances, small bioacoustic datasets present unique challenges: class imbalance, environmental noise, and limited diversity make models sensitive to augmentation bias. Overly aggressive noise-mixing may reduce class separability—an effect rarely analyzed in prior work. Furthermore, lightweight yet expressive architectures remain underexplored for on-device animal recognition.
+The second stage explored whether larger models could compensate for data scarcity. AlexNet-Mel and a Transformer-Mel model were trained under identical preprocessing. While both achieved near-perfect training accuracy, they overfitted within 5–7 epochs and delivered only modest test improvements (0.55–0.61). Their performance confirmed that deep architectures amplify dataset bias when sample diversity is limited, and that high capacity does not translate into real robustness.
 
-This project addresses these gaps by:
-1. Comparing 1D-CNN, AlexNet, and Transformer architectures under equal training constraints;  
-2. Quantifying how naive versus calibrated noise augmentation influences learning stability;  
-3. Demonstrating that balanced augmentation plus regularization can achieve competitive accuracy without relying on large-scale pretraining.
+The successful strategy emerged from refining the lightweight 1D-CNN instead of scaling up. Three interventions were added:
+
+1. Calibrated noise mixing with SNR fixed between 10–20 dB to preserve class cues.
+
+2. SpecAugment masking to inject controlled variability in time–frequency space.
+
+3. Class-weighted loss + early stopping to address imbalance without oversampling.
+
+This enhanced 1D-CNN achieved 0.74 test accuracy and ≥0.6 F1 in 10/12 classes, proving that well-designed augmentation and regularization outperform brute-force model complexity in low-resource ESC tasks.
 
 ---
 
