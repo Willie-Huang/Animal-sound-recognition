@@ -45,7 +45,7 @@ This project addresses these gaps by:
 
 ### 3.1 Dataset and Task
 
-The dataset “Animals_Sounds” contains short audio clips (16 kHz, mono) of animal calls from multiple species (e.g., Bear, Cat, Cow, Dog). Each subfolder represents a class. About 45 samples per class form the Training set, while a separate Test set ensures unbiased evaluation. Additionally, 40 wind noise recordings provide environmental interference for augmentation. The data is highly imbalanced, reflecting real-world field conditions.
+The “Animals_Sounds” dataset contains short audio clips (16 kHz, mono) of various animal sounds (e.g., bears, cats, cows, dogs). The main dataset is derived from Esc-50 audio, supplemented with additional audio from other animal species. Each subfolder represents a category. The training set contains approximately 45 samples per category, while the independent test set includes five audio clips to ensure fair evaluation. Additionally, 40 wind noise recordings are included to provide environmental interference and enhance the data. This dataset is highly imbalanced in quality and is randomly combined with the animal audio from each category, reflecting real-world field environments.
 
 ### 3.2 Feature Extraction
 
