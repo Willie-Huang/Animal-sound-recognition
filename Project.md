@@ -73,7 +73,32 @@ All models optimize sparse categorical cross-entropy with Adam/AdamW, using clas
 - SpecAugment: Applies 1–2 temporal and frequency masks.  
 - Regularization: Dropout, early stopping, learning-rate scheduling, and class weighting.
 
-### 3.5 Evaluation Metrics
+### 3.5 Supervised Learning Objective
+We treat animal sound recognition as a **multi-class supervised classification** problem. Each audio clip inherits its label from the parent folder name (e.g., `Animals_Sounds/Training/Dog/* → label = "Dog"`). Labels are integer-encoded with `LabelEncoder`, and models predict a single class ID per clip. We use a **stratified train/validation split** to preserve class ratios. The evaluation set is kept disjoint for final reporting.
+
+### 3.6 Loss Functions
+- **Primary (baseline & enhanced 1D-CNN, AlexNet-Mel, Transformer-Mel):**
+  - `sparse_categorical_crossentropy` (Keras), which expects integer class IDs and avoids building dense one-hot targets—**memory-efficient for many classes**.
+- **Class imbalance handling:**
+  - **Class weights** computed as inverse frequency (normalized) and passed to `model.fit(..., class_weight=weights_dict)`. This increases loss for minority classes without oversampling.
+- **Regularization at the loss level (where applicable in later scripts):**
+  - Optional **label smoothing = 0.0–0.1** (kept at `0.0` for final numbers), to prevent over-confident logits.
+  
+> Rationale: `sparse_categorical_crossentropy` is consistent across all architectures; with class weighting it directly counteracts skewed label distribution while keeping the training API uniform.
+
+### 3.7 Optimizer & Training Schedule
+- **Optimizer (default):** `Adam(learning_rate=1e-3, beta_1=0.9, beta_2=0.999)`.
+- **Variant (robust scripts):** `AdamW(learning_rate=1e-3, weight_decay=1e-4)` for better stability when adding SpecAugment and calibrated noise.
+- **Learning-rate schedule:** `ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6)`.
+- **Early stopping & checkpoints:** 
+  - `EarlyStopping(monitor="val_loss", patience=6, restore_best_weights=True)`.
+  - `ModelCheckpoint(save_best_only=True, monitor="val_loss")`.
+
+> Rationale: Adam gives fast, stable convergence on log-Mel features; AdamW helps when augmentation increases optimization noise. The LR scheduler and early stopping **reduce overfitting** observed in small-data regimes.
+
+
+
+### 3.8 Evaluation Metrics
 
 The models are evaluated on Accuracy, Weighted F1, and per-class Precision/Recall. Weighted F1 is emphasized as it better represents imbalanced data behavior.
 
