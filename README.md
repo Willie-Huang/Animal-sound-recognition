@@ -176,6 +176,12 @@ Across all five models, the enhanced 1D-CNN clearly delivers the strongest gener
 
 ---
 
+### 4.5 Positioning vs. current small-data SOTA
+
+Comparison to small-data SOTA (brief) — Transfer learning with AudioSet-pretrained models (PANNs, AST, YAMNet) lifts accuracy but adds heavy compute and can misalign with narrow bioacoustic domains (Kong et al., 2020; Gong et al., 2021; Hershey et al., 2017). Self-supervised pretraining (SimCLR, VICReg) cuts label needs but typically requires large batches and strong augs not ideal for tiny corpora (Chen et al., 2020; Bardes et al., 2022). Few-shot/meta-learning (Prototypical Networks) helps extreme scarcity but needs episodic training and careful class balance (Snell et al., 2017). Class-imbalance remedies like focal/class-balanced loss improve minority recall yet can destabilize with very small counts (Lin et al., 2017; Cui et al., 2019). Semi-supervised schemes (FixMatch, Mean Teacher) work if unlabeled data are available and on-domain (Sohn et al., 2020; Tarvainen & Valpola, 2017). Test-time adaptation (TENT) and domain adaptation (DANN, CORAL) help under shift but add complexity (Wang et al., 2021; Ganin et al., 2016; Sun & Saenko, 2016). Given our constraints, a calibrated, class-weighted 1D-CNN offers the best accuracy–complexity trade-off.
+
+---
+
 ## 5. Conclusion
 
 This study systematically analyzed animal sound recognition under data scarcity and imbalance. The experiments showed that moderate-capacity CNNs, combined with carefully tuned augmentation, deliver the best trade-off between generalization and complexity. Naive noise addition can degrade performance through feature homogenization, whereas calibrated SNR control and SpecAugment enhance robustness.
