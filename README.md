@@ -32,7 +32,7 @@ After building the baseline 1D-CNN classifier, the core objective of this projec
 (1) minority classes were consistently misclassified
 (2) the model was extremely sensitive to background noise, suggesting poor feature generalization.
 
-The first modification focused on augmentation rather than architecture. A naive strategy was implemented: randomly mixing wind noise into every training clip. However, because the SNR range was uncontrolled, the injected noise frequently dominated the acoustic energy, masking formant and harmonic structures that define species identity. The result was a data-collapse phenomenon, where latent features across different classes became nearly indistinguishable, leading to unstable validation curves and F1 drops in minority labels such as Monkey, Sheep, and Pig. This failure demonstrated that “more augmentation” is not automatically “better augmentation.”
+The first modification focused on augmentation rather than architecture. A simply strategy was implemented: randomly mixing wind noise into every training clip. However, because the SNR range was uncontrolled, the injected noise frequently dominated the acoustic energy, masking formant and harmonic structures that define species identity. The result was a data-collapse phenomenon, where latent features across different classes became nearly indistinguishable, leading to unstable validation curves and F1 drops in minority labels such as Monkey, Sheep, and Pig. This failure demonstrated that “more augmentation” is not automatically “better augmentation.”
 
 The second stage explored whether larger models could compensate for data scarcity. AlexNet-Mel and a Transformer-Mel model were trained under identical preprocessing. While both achieved near-perfect training accuracy, they overfitted within 5–7 epochs and delivered only modest test improvements (0.55–0.61). Their performance confirmed that deep architectures amplify dataset bias when sample diversity is limited, and that high capacity does not translate into real robustness.
 
@@ -68,7 +68,7 @@ All models optimize sparse categorical cross-entropy with Adam/AdamW, using clas
 
 ### 3.4 Data Augmentation & Regularization
 
-- Naive Noise-Mixing: Randomly adds wind noise (0–20 dB SNR). Effective only under mild conditions; too low SNR causes feature collapse.  
+- Simply Noise-Mixing: Randomly adds wind noise (0–20 dB SNR). Effective only under mild conditions; too low SNR causes feature collapse.  
 - Calibrated Noise-Mixing (Proposed): Limits SNR to 10–20 dB, enforces equal class coverage, and mixes noise only on training data.  
 - SpecAugment: Applies 1–2 temporal and frequency masks.  
 - Regularization: Dropout, early stopping, learning-rate scheduling, and class weighting.
@@ -111,7 +111,7 @@ The models are evaluated on Accuracy, Weighted F1, and per-class Precision/Recal
 | Model Variant               | Test Accuracy | Weighted F1 | Observations |
 |----------------------------|---------------|-------------|--------------|
 | 1D-CNN Baseline            | 0.45          | 0.44        | Stable but limited generalization |
-| + Naive Wind Noise         | 0.47          | 0.47        | Slight gain; unstable behaviour from uncontrolled SNR |
+| + Simply Wind Noise         | 0.47          | 0.47        | Slight gain; unstable behaviour from uncontrolled SNR |
 | AlexNet-Mel                | 0.55          | 0.54        | Higher capacity but overfits; sensitive to class imbalance |
 | Transformer-Mel            | 0.61          | 0.62        | Strong training fit; weaker real-world generalization |
 | **Enhanced 1D-CNN (best)** | **0.74**      | **0.74**    | Best overall balance of robustness, simplicity, and stability |
@@ -140,7 +140,7 @@ Figures 1–3 compare five architectures across 12 animal classes.
 3. **Enhanced 1D-CNN is consistently stable.**  
    It avoids extreme highs/lows and maintains ≥0.6 F1 in 10/12 classes, indicating that *calibrated noise*, *SpecAugment*, and *class-weighting* collectively preserve class separability.
 
-4. **Naive wind-mixing degrades minority classes.**  
+4. **Simply wind-mixing degrades minority classes.**  
    Wind noise without SNR control suppresses harmonic cues, flattening recall for *Monkey*, *Sheep*, and *Pig*, which explains the “data collapse” effect observed during training.
 
 The three panels reveal complementary failure modes. In precision, the Transformer and enhanced 1D-CNN often reach near-perfect scores on frequent classes (e.g., Cow, Dog, Rooster), yet the Transformer collapses on Sheep and Horse (≤0.5), signalling unstable decision boundaries. AlexNet oscillates widely and even hits 0 on Cat, while the baseline and naïve-mixing models remain mid-range. In recall, the enhanced 1D-CNN sustains 0.8–1.0 across many classes and avoids zeros; AlexNet drops to 0 for Cat, the baseline falls to 0 on Pig, and naïve mixing suppresses several classes—evidence of sensitivity to imbalance and augmentation bias. The F1 curves integrate these effects: enhanced 1D-CNN is consistently highest and tightest; the Transformer is high-variance; AlexNet is brittle on minority classes; the baseline is conservative; naïve mixing is modest. Overall, calibrated augmentation and class-weighted training yield robust generalization, whereas larger architectures need more data or pretraining to translate capacity into stable gains.
@@ -156,11 +156,11 @@ The three panels reveal complementary failure modes. In precision, the Transform
 
 ####  Key observations from Figures 4～5
 
-- The **Enhanced 1D-CNN surpasses all other models** by at least +13% absolute accuracy over the baseline and +19% over naive noise-mixing.  
+- The **Enhanced 1D-CNN surpasses all other models** by at least +13% absolute accuracy over the baseline and +19% over simply noise-mixing.  
 - The gap between **macro** and **weighted** F1 is smallest for the enhanced model, confirming reduced imbalance bias.  
 - Transformer and AlexNet improve training curves but **do not translate gains to real test generalization**, demonstrating that capacity is not a substitute for data suitability.
 
-Across all five models, the enhanced 1D-CNN clearly delivers the strongest generalization, achieving the highest test accuracy (~0.74) and the best weighted F1, indicating balanced performance across majority and minority classes. Transformer and AlexNet show higher capacity but weaker real-world robustness, as their gains in training do not translate into proportional test improvements. The baseline and naive wind-mixing variants remain limited by class imbalance and noise sensitivity. Overall, controlled augmentation and lightweight architecture outperform deeper models when data are scarce and unevenly distributed.
+Across all five models, the enhanced 1D-CNN clearly delivers the strongest generalization, achieving the highest test accuracy (~0.74) and the best weighted F1, indicating balanced performance across majority and minority classes. Transformer and AlexNet show higher capacity but weaker real-world robustness, as their gains in training do not translate into proportional test improvements. The baseline and simply wind-mixing variants remain limited by class imbalance and noise sensitivity. Overall, controlled augmentation and lightweight architecture outperform deeper models when data are scarce and unevenly distributed.
 
 ---
 
@@ -170,7 +170,7 @@ Across all five models, the enhanced 1D-CNN clearly delivers the strongest gener
   Transformer has the highest parameter count yet suffers the sharpest per-class variance.
 
 - **Augmentation strategy matters more than depth.**  
-  Naive wind mixing worsens feature collapse, while controlled SNR mixing + SpecAugment restores inter-class separability.
+  Simply wind mixing worsens feature collapse, while controlled SNR mixing + SpecAugment restores inter-class separability.
 
 - **Enhanced 1D-CNN offers the best trade-off** — low latency, reproducible runs, and no dedicated GPU requirement.
 
@@ -184,7 +184,7 @@ In small, imbalanced regimes, our Enhanced 1D-CNN prioritizes stability and comp
 
 ## 5. Conclusion
 
-This study systematically analyzed animal sound recognition under data scarcity and imbalance. The experiments showed that moderate-capacity CNNs, combined with carefully tuned augmentation, deliver the best trade-off between generalization and complexity. Naive noise addition can degrade performance through feature homogenization, whereas calibrated SNR control and SpecAugment enhance robustness.
+This study systematically analyzed animal sound recognition under data scarcity and imbalance. The experiments showed that moderate-capacity CNNs, combined with carefully tuned augmentation, deliver the best trade-off between generalization and complexity. simply noise addition can degrade performance through feature homogenization, whereas calibrated SNR control and SpecAugment enhance robustness.
 
 The project contributes a clear framework for future small-data bioacoustic tasks—highlighting that “simpler but well-regularized” models often outperform deep architectures when training data are limited.
 
