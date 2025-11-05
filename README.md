@@ -13,6 +13,8 @@
   - [4.1 Quantitative Results](#41-quantitative-results)
   - [4.2 Discussion](#42-discussion)
   - [4.3 Practical Considerations](#43-practical-considerations)
+  - [4.4 Practical Implications](#44-practical-Implications)
+  - [4.5 Positioning vs. Small-data SOTA](#45-Positioning-vs-small-data-SOTA)
 - [5. Conclusion](#5-conclusion)
 - [References](#references)
 
@@ -164,8 +166,7 @@ Across all five models, the enhanced 1D-CNN clearly delivers the strongest gener
 
 ---
 
-### 4.4 Practical Implications
-
+### 4.4 Practical Implications 
 - **Model complexity is not a predictor of robustness.**  
   Transformer has the highest parameter count yet suffers the sharpest per-class variance.
 
@@ -176,7 +177,7 @@ Across all five models, the enhanced 1D-CNN clearly delivers the strongest gener
 
 ---
 
-### 4.5 Positioning vs. current small-data SOTA
+### 4.5 Positioning vs. Small-data SOTA
 
 In small, imbalanced regimes, our Enhanced 1D-CNN prioritizes stability and compute-efficiency over maximal topline. By contrast, pretrained audio backbones—PANNs, YAMNet, AST/HTS-AT—fine-tSelf-supervised pretraining on unlabeled audio (BYOL-A, COLA, wav2vec 2.0) can close the gap without labels but requires long pretraining and careful augmentation/scheduling (Niizumi, 2021; Saeed, 2021; Baevski, 2020). Metric/few-shot learners (e.g., Prototypical Networks) handle extreme imbalance but may be brittle when class manifolds overlap (Snell, 2017). Loss-level tactics—class-balanced loss or focal loss—improve minority recall but can destabilize training if over-weighted (Cui, 2019; Lin, 2017). Low-cost regularizers—SpecAugment, mixup, and calibrated SNR noise—consistently help (Park, 2019; Zhang, 2018). Given tens of clips per class, our enhanced 1D-CNN offers the best accuracy–complexity trade-off now, while transfer or SSL is a promising next step if compute and unlabeled audio are available.
 
