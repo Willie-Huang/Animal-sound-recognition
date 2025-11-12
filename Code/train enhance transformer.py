@@ -309,7 +309,7 @@ def _time_stretch_feat(x: np.ndarray, max_rate=0.15):
     right = np.clip(left + 1, 0, T - 1)
     w = grid - left
     x_stretch = (1 - w)[:, None] * x[left] + w[:, None] * x[right]
-    # 回到原长（pad/trunc）
+    # Return to the original length（pad/trunc）
     if new_T >= T:
         return x_stretch[:T]
     else:
