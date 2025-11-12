@@ -257,5 +257,5 @@ Future work will explore methods such as semi-supervised pre-training, domain ad
 16. Saeed, A., Grangier, D., & Zeghidour, N. (2021). Contrastive learning of general-purpose audio representations (COLA).  
 17. Zhang, H., Cisse, M., Dauphin, Y. N., & Lopez-Paz, D. (2018). Mixup: Beyond empirical risk minimization.
 
-The Code comes from 1-D CNN baseline (https://github.com/emshina/Sound-Animal-Recognition/blob/main/train.py)
-My github link: https://github.com/Willie-Huang/Animal-sound-recognition/blob/main/README.md
+- **The Code comes from 1-D CNN baseline (https://github.com/emshina/Sound-Animal-Recognition/blob/main/train.py)**
+- **My github link: https://github.com/Willie-Huang/Animal-sound-recognition/blob/main/README.md**
