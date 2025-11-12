@@ -1,4 +1,4 @@
-# Animal Sound Recognition
+# Animal Sounds Recognition
 
 ## Table of Contents
 - [1. Introduction](#1-introduction)
