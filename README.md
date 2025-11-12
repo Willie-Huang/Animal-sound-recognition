@@ -205,7 +205,7 @@ This study systematically analyzes the animal sound recognition problem under co
 
 This project provides a clear framework for future small-data bioacoustic tasks, emphasizing that "simpler but well-regularized" models often outperform deep architectures when training data is limited.
 
-Relationship with previous work Our findings are consistent with previous reports that the choice of data augmentation and pre-training dominates the results in resource-constrained audio tasks (Park et al., 2019; Kong et al., 2020; Gong et al., 2021). Unlike works utilizing large-scale pre-training or SSL (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020), we demonstrate that a well-regularized lightweight model can achieve high accuracy even with limited computational and label resources—which is highly valuable for edge deployments.
+Relationship with previous work Our findings are consistent with previous reports that the choice of data augmentation and pre-training dominates the results in resource-constrained audio tasks (Park et al., 2019; Kong et al., 2020; Gong et al., 2021). Unlike works utilizing large-scale pre-training or SSL (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020), we demonstrate that a well-regularized lightweight model can achieve high accuracy even with limited computational and label resources, which is highly valuable for edge deployments.
 
 But in this project also have some Limitations. The small test sample size and limited class diversity limit statistical determinism. The process remains sensitive to class-inherent variability and extreme acoustic conditions.
 
