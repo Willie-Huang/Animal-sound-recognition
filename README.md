@@ -211,7 +211,7 @@ Relationship with previous work Our findings are consistent with previous report
 
 But in this project also have some Limitations. The small test sample size and limited class diversity limit statistical determinism. The process remains sensitive to class-inherent variability and extreme acoustic conditions.
 
-Future work will explore methods such as semi-supervised pre-training, domain adaptation, and test-time data augmentation to further improve the model's stability in unknown acoustic environments. Furthermore, we explored PANN/AST fine-tuning for controlled transfer learning comparisons; evaluated SSL pre-training (BYOL-A/COLA) (if unlabeled audio is available); investigated mix/class balance or focus loss under strict ablation conditions; and added test-time data augmentation and domain adaptation for unseen sound environments.
+Future work will explore methods such as semi-supervised pre-training, domain adaptation, and test-time data augmentation to further improve the model's stability in unknown acoustic environments. Furthermore, we will explore PANN/AST fine-tuning for controlled transfer learning comparisons, evaluate semi-supervised pre-training, investigate mixing/class balance or focus loss under strict ablation conditions, and add test-time data augmentation and domain adaptation for unseen acoustic environments.
 
 ---
 
