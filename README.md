@@ -3,6 +3,9 @@
 ## Table of Contents
 - [1. Introduction](#1-introduction)
 - [2. Literature Review](#2-literature-review)
+  - [2.1 State of the art and problem setting](#21-State-of-the-art-and-problem-setting)
+  - [2.2 Candidate methods, rationale, and trade-offs (with code availability)](#22-Candidate-methods，-rationale，-and-trade-offs)
+  - [2.3 New concepts learned while reading](#23-New-concepts-learned-while-reading)
 - [3. Methods](#3-methods)
   - [3.1 Dataset and Task](#31-dataset-and-task)
   - [3.2 Feature Extraction](#32-feature-extraction)
@@ -20,33 +23,46 @@
 
 ---
 
-## 1. Introduction
+# 1. Introduction
+This project investigates animal-sound recognition under **small** and **imbalanced** data constraints. We begin with a compact 1D-CNN baseline and examine how model capacity (AlexNet-Mel, Transformer-Mel) and augmentation strategies affect robustness. Early trials with naïve wind-noise mixing revealed a **data-collapse** failure mode—uncontrolled SNR and random composition masked class-defining cues, distorted label balance, and destabilized validation trends.
 
-This project targets animal sound recognition under small and imbalanced data constraints. It begins with a compact 1D-CNN baseline and systematically examines how model capacity (AlexNet-Mel, Transformer) and augmentation strategies influence robustness. Initial experiments using naïve wind-noise mixing exposed a data collapse problem—uncontrolled SNR levels and random mixing caused noise to overpower class cues, distort label balance, and produce unstable validation trends.
-
-To overcome this, a calibrated processing pipeline was designed: 128-bin log-Mel features (16 kHz), per-sample z-normalization, SpecAugment, class-weight rebalancing, and early stopping. Although AlexNet and Transformer offer higher representational power, they show limited test gains, long training times, and heavy hardware demand under small data conditions. The final enhanced 1D-CNN achieves a balanced accuracy–stability trade-off, reaching 0.74 test accuracy with reproducible results and efficient CPU deployment, demonstrating that carefully regularized mid-capacity models outperform deeper ones on limited datasets.
+To address this, we designed a calibrated pipeline: **128-bin log-Mel** features at 16 kHz, per-sample **z-normalization**, **SpecAugment**, **class-weighted loss**, and **early stopping**. Although deeper models offer higher capacity, they produced limited test gains and heavier compute demand in the small-data regime. A deliberately **mid-capacity, well-regularized 1D-CNN** achieved the most reliable accuracy–stability trade-off (~0.74 accuracy) and runs efficiently on CPU.
 
 ---
 
-## 2. Literature Review
+# 2. Literature Review
 
-After building the baseline 1D-CNN classifier, the core objective of this project became understanding what combination of model architecture and data-handling strategy is truly suitable for small, imbalanced animal-sound datasets. The baseline network provided a useful reference point (~0.45 accuracy), but its behaviour exposed two fundamental issues: 
-(1) minority classes were consistently misclassified
-(2) the model was extremely sensitive to background noise, suggesting poor feature generalization.
+## 2.1 State of the art and problem setting
+Environmental/bioacoustic classification typically relies on spectro-temporal representations (e.g., log-Mel) plus convolutional or transformer encoders, evaluated on benchmarks such as **ESC-50** and **AudioSet** (Piczak, 2015; Gemmeke et al., 2017; McFee et al., 2015). Modern **pretrained audio backbones**—notably **PANNs** and **AST**—transfer supervised features from large-scale corpora to small downstream tasks (Kong et al., 2020; Gong et al., 2021). In parallel, **self-supervised learning (SSL)** reduces labeled-data needs with contrastive or redundancy-reduction objectives (e.g., BYOL-A, COLA, wav2vec 2.0) (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020).
 
-The first modification focused on augmentation rather than architecture. A simply strategy was implemented: randomly mixing wind noise into every training clip. However, because the SNR range was uncontrolled, the injected noise frequently dominated the acoustic energy, masking formant and harmonic structures that define species identity. The result was a data-collapse phenomenon, where latent features across different classes became nearly indistinguishable, leading to unstable validation curves and F1 drops in minority labels such as Monkey, Sheep, and Pig. This failure demonstrated that “more augmentation” is not automatically “better augmentation.”
+For **augmentation**, **SpecAugment** injects structured time–frequency variability (Park et al., 2019); **mixup** regularizes decision boundaries (Zhang et al., 2018). Loss-level remedies (e.g., **focal** or **class-balanced** losses) target imbalance directly (Lin et al., 2017; Cui et al., 2019). Despite these tools, **very small, imbalanced datasets** remain challenging: heavy models overfit; naïve noise mixing degrades class separability; per-class variance becomes pronounced without disciplined regularization.
 
-The second stage explored whether larger models could compensate for data scarcity. AlexNet-Mel and a Transformer-Mel model were trained under identical preprocessing. While both achieved near-perfect training accuracy, they overfitted within 5–7 epochs and delivered only modest test improvements (0.55–0.61). Their performance confirmed that deep architectures amplify dataset bias when sample diversity is limited, and that high capacity does not translate into real robustness.
+**Summary:** The literature supports three pragmatic paths for small-data bioacoustics—(i) lightweight CNNs with disciplined augmentation; (ii) pretrained audio encoders (PANNs/AST) with shallow heads; (iii) SSL pretraining when unlabeled audio is available. Each path must still confront class imbalance and noise robustness.
 
-The successful strategy emerged from refining the lightweight 1D-CNN instead of scaling up. Three interventions were added:
+## 2.2 Candidate methods, rationale, and trade-offs (with code availability)
+- **Lightweight CNNs on log-Mel.** Simple 1D/2D CNNs trained from scratch are widely available in open-source repos, fast to iterate, and tolerant of small data when paired with strong augmentation.  
+  **advantage:** Low compute; fewer hyperparameters; CPU-friendly.  
+  **disadvantage:** Capacity ceiling; minority classes may underfit without extra tactics.  
+  **Rationale for this work:** Matches our data regime and deployment goals; enables controlled studies of augmentation and loss reweighting.
 
-1. Calibrated noise mixing with SNR fixed between 10–20 dB to preserve class cues.
+- **Supervised pretrained backbones (PANNs, AST).** Feature extractors trained on AudioSet (Kong et al., 2020; Gong et al., 2021). Numerous GitHub implementations exist with plug-and-play heads.  
+  **advantage:** Strong transfer; quick convergence; robust features.  
+  **disadvantage:** Heavier inference cost; domain mismatch risk; can still overfit with very few labels.
 
-2. SpecAugment masking to inject controlled variability in time–frequency space.
+- **Self-supervised pretraining (BYOL-A, COLA, wav2vec 2.0).** Learn invariances from unlabeled audio, then fine-tune (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020).  
+  **advantage:** Reduces label dependence; improves generalization.  
+  **disadvantage:** Significant pretraining time; augmentation/scheduler complexity.
 
-3. Class-weighted loss + early stopping to address imbalance without oversampling.
+- **Imbalance-aware objectives (focal / class-balanced losses).** Emphasize hard or minority examples (Lin et al., 2017; Cui et al., 2019).  
+  **advantage:** Better minority recall.  
+  **disadvantage:** Hyperparameter-sensitive; may destabilize training with tiny datasets.
 
-This enhanced 1D-CNN achieved 0.74 test accuracy and ≥0.6 F1 in 10/12 classes, proving that well-designed augmentation and regularization outperform brute-force model complexity in low-resource ESC tasks.
+## 2.3 New concepts learned while reading
+- **SpecAugment** as a label-preserving variability mechanism (Park et al., 2019).  
+- **SNR-calibrated noise mixing** vs. naïve mixing: uncontrolled SNR can mask harmonics/formants and collapse class manifolds.  
+- **Pretrained audio encoders** (PANNs/AST) and their transfer characteristics (Kong et al., 2020; Gong et al., 2021).  
+- **SSL objectives** (BYOL-A/COLA/wav2vec 2.0) for unlabeled audio (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020).  
+- **Imbalance-aware losses** (focal/class-balanced): mechanisms and tuning pitfalls (Lin et al., 2017; Cui et al., 2019).
 
 ---
 
@@ -185,27 +201,36 @@ In small, imbalanced regimes, our Enhanced 1D-CNN prioritizes stability and comp
 
 ## 5. Conclusion
 
-This study systematically analyzed animal sound recognition under data scarcity and imbalance. The experiments showed that moderate-capacity CNNs, combined with carefully tuned augmentation, deliver the best trade-off between generalization and complexity. simply noise addition can degrade performance through feature homogenization, whereas calibrated SNR control and SpecAugment enhance robustness.
+This study systematically analyzes the animal sound recognition problem under conditions of scarce and imbalanced data. Experiments show that a moderately sized convolutional neural network (CNN) combined with carefully tuned data augmentation methods achieves the optimal balance between generalization ability and model complexity. Simply "adding noise" or "adding parameters" does not improve model robustness: simple hybrid models lead to data collapse; deeper models overfit and exhibit unstable class behavior. However, under conditions of small and imbalanced sample sizes, canonical data augmentation and a moderately sized CNN provide the most reliable generalization ability. A calibrated signal-to-noise ratio (10–20 dB) avoids feature masking; SpecAugment introduces label-preserving variation; and class weighting suppresses majority class advantage. These methods work together to transform a small-scale backbone network into a robust classifier.
 
-The project contributes a clear framework for future small-data bioacoustic tasks—highlighting that “simpler but well-regularized” models often outperform deep architectures when training data are limited.
+This project provides a clear framework for future small-data bioacoustic tasks, emphasizing that "simpler but well-regularized" models often outperform deep architectures when training data is limited.
 
-Future work will explore semi-supervised pretraining, domain adaptation, and test-time augmentation to further improve model stability across unseen acoustic environments.
+Relationship with previous work Our findings are consistent with previous reports that the choice of data augmentation and pre-training dominates the results in resource-constrained audio tasks (Park et al., 2019; Kong et al., 2020; Gong et al., 2021). Unlike works utilizing large-scale pre-training or SSL (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020), we demonstrate that a well-regularized lightweight model can achieve high accuracy even with limited computational and label resources—which is highly valuable for edge deployments.
+
+But in this project also have some Limitations. The small test sample size and limited class diversity limit statistical determinism. The process remains sensitive to class-inherent variability and extreme acoustic conditions.
+
+Future work will explore methods such as semi-supervised pre-training, domain adaptation, and test-time data augmentation to further improve the model's stability in unknown acoustic environments. Furthermore, we explored PANN/AST fine-tuning for controlled transfer learning comparisons; evaluated SSL pre-training (BYOL-A/COLA) (if unlabeled audio is available); investigated mix/class balance or focus loss under strict ablation conditions; and added test-time data augmentation and domain adaptation for unseen sound environments.
 
 ---
 
 ## References
 
-1. Piczak, K. J. (2015). ESC: Dataset for Environmental Sound Classification.  
-2. McFee, B., et al. (2015). Librosa: Audio and Music Signal Analysis in Python.  
-3. Park, D. S., et al. (2019). SpecAugment: A Simple Data Augmentation Method for ASR.  
-4. Kong, Q., et al. (2020). PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition.  
-5. Gemmeke, J. F., et al. (2017). AudioSet: An Ontology and Human-Labeled Dataset for Audio Events.  
-6. Chen, T., et al. (2020). SimCLR: A Simple Framework for Contrastive Learning of Visual Representations.  
-7. Snell, J., et al. (2017). Prototypical Networks for Few-Shot Learning.  
-8. Bardes, A., et al. (2022). VICReg: Variance-Invariance-Covariance Regularization for SSL.  
-9. Gong, Y., et al. (2021). AST: Audio Spectrogram Transformer.  
-10. Krizhevsky, A., et al. (2012). ImageNet Classification with Deep Convolutional Neural Networks (AlexNet).  
-11. Sandler, M., et al. (2018). MobileNetV2: Inverted Residuals and Linear Bottlenecks.  
-12. Lin, T.-Y., et al. (2017). Focal Loss for Dense Object Detection.  
-13. Kingma, D. P., & Ba, J. (2015). Adam: A Method for Stochastic Optimization.  
-14. Dosovitskiy, A., et al. (2021). An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale (ViT).
+1. Baevski, A., Zhou, H., Mohamed, A., & Auli, M. (2020). wav2vec 2.0: Self-supervised learning of speech representations.  
+2. Chen, T., Kornblith, S., Norouzi, M., & Hinton, G. (2020). SimCLR: A simple framework for contrastive learning of visual representations.  
+3. Cui, Y., Jia, M., Lin, T.-Y., Song, Y., & Belongie, S. (2019). Class-balanced loss based on effective number of samples.  
+4. Dosovitskiy, A., et al. (2021). An image is worth 16×16 words: Transformers for image recognition at scale (ViT).  
+5. Gemmeke, J. F., et al. (2017). AudioSet: An ontology and human-labeled dataset for audio events.  
+6. Gong, Y., Chung, Y.-A., & Glass, J. (2021). AST: Audio spectrogram transformer.  
+7. Kingma, D. P., & Ba, J. (2015). Adam: A method for stochastic optimization.  
+8. Kong, Q., et al. (2020). PANNs: Large-scale pretrained audio neural networks for audio pattern recognition.  
+9. Krizhevsky, A., Sutskever, I., & Hinton, G. (2012). ImageNet classification with deep convolutional neural networks (AlexNet).  
+10. Lin, T.-Y., Goyal, P., Girshick, R., He, K., & Dollár, P. (2017). Focal loss for dense object detection.  
+11. Loshchilov, I., & Hutter, F. (2019). Decoupled weight decay regularization (AdamW).  
+12. McFee, B., et al. (2015). librosa: Audio and music signal analysis in Python.  
+13. Niizumi, D., Takeuchi, D., Ohishi, Y., Harada, N., & Nishida, T. (2021). BYOL-A: Self-supervised representation learning for audio.  
+14. Park, D. S., et al. (2019). SpecAugment: A simple data augmentation method for ASR.  
+15. Piczak, K. J. (2015). ESC: Dataset for environmental sound classification.  
+16. Saeed, A., Grangier, D., & Zeghidour, N. (2021). Contrastive learning of general-purpose audio representations (COLA).  
+17. Zhang, H., Cisse, M., Dauphin, Y. N., & Lopez-Paz, D. (2018). Mixup: Beyond empirical risk minimization.
+
+The Code comes from 1-D CNN baseline (https://github.com/emshina/Sound-Animal-Recognition/blob/main/train.py)
