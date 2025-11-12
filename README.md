@@ -60,11 +60,8 @@ For **augmentation**, **SpecAugment** injects structured time–frequency variab
   **disadvantage:** Hyperparameter-sensitive; may destabilize training with tiny datasets.
 
 ## 2.3 New concepts learned while reading
-- **SpecAugment** as a label-preserving variability mechanism (Park et al., 2019).  
-- **SNR-calibrated noise mixing** vs. naïve mixing: uncontrolled SNR can mask harmonics/formants and collapse class manifolds.  
-- **Pretrained audio encoders** (PANNs/AST) and their transfer characteristics (Kong et al., 2020; Gong et al., 2021).  
-- **SSL objectives** (BYOL-A/COLA/wav2vec 2.0) for unlabeled audio (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020).  
-- **Imbalance-aware losses** (focal/class-balanced): mechanisms and tuning pitfalls (Lin et al., 2017; Cui et al., 2019).
+
+In small-sample animal sound recognition, generalization ability can be enhanced simultaneously on both the data and model sides: SpecAugment injects diversity through time-frequency occlusion and deformation without altering the labels, effectively reducing the risk of overfitting (Park, 2019). When wind noise is mixed in, calibration according to the set SNR is necessary; otherwise, uncontrolled noise mixing will mask harmonics and formants and cause cluster collapse. On the model side, pre-trained audio encoders such as PANNs and ASTs can be used to obtain transferable representations and shorten convergence time (Kong et al., 2020; Gong et al., 2021). When labels are scarce, robust features can be learned first using self-supervised targets such as BYOL-A, COLA, or wav2vec 2.0 before fine-tuning (Niizumi et al., 2021; Saeed et al., 2021; Baevski et al., 2020). At the same time, focal loss or class-balanced loss can be combined during the supervision stage. It can improve minority class recall and suppress class imbalance bias, but careful parameter tuning is required to avoid training instability (Lin et al., 2017; Cui et al., 2019).
 
 ---
 
@@ -74,17 +71,36 @@ For **augmentation**, **SpecAugment** injects structured time–frequency variab
 
 The “Animals_Sounds” dataset contains short audio clips (16 kHz, mono) of various animal sounds (e.g., bears, cats, cows, dogs). The main dataset is derived from Esc-50 audio, supplemented with additional audio from other animal species. Each subfolder represents a category. The training set contains approximately 45 samples per category, while the independent test set includes five audio clips to ensure fair evaluation. Additionally, 40 wind noise recordings are included to provide environmental interference and enhance the data. This dataset is highly imbalanced in quality and is randomly combined with the animal audio from each category, reflecting real-world field environments.
 
+---
+
 ### 3.2 Feature Extraction
 
-All clips are resampled to 16 kHz, transformed into 128-bin log-Mel spectrograms using `n_fft=1024` and `hop_length=512`, then normalized (zero mean, unit variance). Each sequence is padded or truncated to 500 frames, ensuring consistent input length across the dataset.
+All audio data is first standardized to 16 kHz, and a 128-dimensional log-Mel spectrum is calculated (n_fft=1024, hop=512). For each sample, zero-mean/unit-variance normalization is performed band-by-band, and the temporal sequence is then aligned to 500 frames (truncated or zero-padding). This step stably projects the energy, harmonics, transients, and other information of the original waveform onto a "time × frequency" texture plane, facilitating pattern extraction in subsequent models.
+
+---
+
+- **Baseline 1D-CNN (Temporal Convolution for Texture Extraction)**: 1D convolution treats the 128-dimensional spectrum of each frame as a "channel," sliding the convolution kernel only along the time axis. The first layer, with its short kernel receptive field, captures transients and rhythms (such as the rise and fall of vocalizations, pulse intervals in barks, and fluctuations in energy envelopes). The second layer, stacked, forms a longer-term modulation pattern (such as repetitive rhythms and continuous/discontinuous textures). MaxPooling downsamples temporally, resulting in slight temporal translation invariance; BatchNorm and Dropout stabilize statistics and suppress overfitting. Flatten + fully connected layers "summarize" these temporal textures into categorical evidence for the entire vocalization. Intuitively, it's more like listening to "how it vocalizes" (temporal rhythm) rather than overfitting specific frequency points.
+  
+- **AlexNet-Mel (2D-CNN for Joint Temporal and Frequency Texture Extraction)**: Treats the spectrogram as a single-channel image using 2D convolution, with the convolution kernel spanning both time and frequency. Shallow convolutional layers learn edges/ridges (harmonic stripes, formant orientation), patches/bursts (broadband transients), and diagonal patterns (up/down glissando, chirps); mid-to-late layers combine these local primitives into template-like structures (e.g., the bandwidth and undulation shape of a "cat's meow," the periodic patterns of a "rooster's crow"). Multiple pooling layers provide invariance to small temporal and frequency translations/pitch variations, while global average pooling compresses the entire texture into a discriminative vector. Intuitively, it simultaneously considers "in which frequency bands" and "when" which textures appear.
+  
+- **Transformer-Mel (Patched Self-Attention Long-Range Textures)**:The (T,F) spectrum is first sliced ​​into fixed-size time-frequency patches as tokens, linearly projected onto the d_model, and then positionally encoded, followed by multiple layers of self-attention. Attention weights allow distant patches to "associate" with each other, thus making it highly sensitive to long-term dependencies and cross-band collaborations: such as rhythmic repetition, multi-segment responsive calls, and long-distance harmonic resonances. Global pooling yields whole-sentence embeddings for classification. Adding lightweight 1D downsampling before patching is equivalent to performing local filtering first, then using attention for global pairing. Intuitively, it excels at "seeing the global structure": the echoing relationships of the same type of call at different times/frequency bands.
+  
+- **SSL + ProtoNet variant (learn transferable textures first, then discriminate based on similarity)**:Self-supervised learning (such as SimCLR) augments unlabeled conditions through time shifting, time/frequency occlusion, and mild time stretching, forcing the encoder output to maintain similarity across different views of the same audio and separation across different samples, thus learning noise-insensitive, cross-condition robust texture embeddings. ProtoNet uses the mean of the training sample embeddings for each class as the class prototype and uses Euclidean distance for discrimination. Effectively, the representation clusters textures of "different calls of the same animal in different environments" and separates textures of "different animals," resulting in greater stability even with fewer samples. Intuitively, it's like learning a "map of texture space" first, then classifying based on which prototype is closer.
+  
+With augmented coupling, SNR-calibrated wind noise mixing controls the energy ratio in the waveform domain, avoiding the drowning out of harmonics/resonance peaks; SpecAugment punches "holes" (temporal/frequency occlusion) in the feature domain, forcing the model to rely on global and redundant cues rather than local spikes. For 1D-CNNs, this shapes a more robust temporal rhythm description; for 2D-CNNs, it prompts convolutional kernels to focus on stable temporal-frequency structures; for Transformers, self-attention, when "hole-punched," prioritizes long-range consistency and cross-patch cooperative patterns. Taken together, these three architectures "see" and encode the temporal-frequency texture of animal call timbre in different ways.
+
+---
 
 ### 3.3 Model Architectures
 
-- **Baseline 1D-CNN**: Two Conv1D blocks (32, 64 filters) with batch normalization, max pooling, and dropout (0.3–0.4), followed by a dense classifier.  
-- **AlexNet-Mel (2D-CNN)**: Adapts AlexNet to Mel-spectrogram “images”.  
-- **Transformer-Mel**: Uses patchified spectrogram tokens with positional encoding and self-attention layers.  
+- **Baseline 1D-CNN**: The input is a log-Mel sequence (T=500, F=128), and 1D convolution is performed only along the time axis: Conv1D(32,k=3) → BN → MaxPool(2) → Dropout(0.3) → Conv1D(64,k=3) → BN → MaxPool(2) → Dropout(0.3) → Flatten → Dense(128) → Dropout(0.4) → Softmax. This structure treats the "temporal dynamics" as the main signal and the "frequency dimension" as the channel feature. It has a small number of parameters, stable gradients, and is friendly to small data. Combined with class weights, early stopping, and ReduceLROnPlateau, it can often obtain the most stable macro/weighted F1. The focus of parameter tuning is on the convolution kernel size (3–7), pooling stride, and dropout intensity. If you want to further suppress noise without sacrificing separability, it is recommended to use controlled SNR noise mixing (10–20 dB) and lightweight SpecAugment only on the training set. Suitable for scenarios with CPU deployment, small sample size, and significant class imbalance.
 
+- **AlexNet-Mel (2D-CNN)**: Treating the acoustic spectrum as a "single-channel image," this approach uses 2D convolution and pooling: large kernels/large strides in the initial layers quickly compress the resolution (e.g., Conv2D(64, 11×11, stride=2)), while the middle and later layers use 3×3 stacking to extract local textures. Finally, a GAP → Dense → Softmax approach is applied. It can simultaneously capture joint temporal and frequency patterns (formant shapes, modulation stripes, etc.), with a higher upper limit than 1D-CNNs, but it is more prone to overfitting with small sample sizes and is very sensitive to regularization and augmentation. Key practical points: reduce the number of channels in the first two layers (e.g., 64/128 → 48/96), retain finer temporal resolution (appropriately reduce stride), increase BN and Dropout, use weight decay (AdamW), and maintain a class-balanced augmentation quota. Suitable for scenarios with GPUs, where the goal is to uncover more complex temporal and frequency local structures and provide stronger regularization/verification mechanisms. 
+
+- **Transformer-Mel**: First, the (T,F) patch is converted into tokens (e.g., 16×16 → approximately ceil(500/16)×ceil(128/16) ≈ 32×8=256 tokens), linearly projected onto d_model, then positional encoding is added, and multiple layers of MHA + FFN + residual + LN are stacked. Finally, global pooling is applied to the classification head. The advantage is that it can model long-term temporal correlations and cross-band dependencies without requiring a fixed receptive field, making it suitable for tasks that distinguish between classes based on rhythm/pattern differences. The disadvantages are that it requires a large amount of data, is highly sensitive to augmentation and regularization, and often exhibits the phenomenon of "good training performance but jittery testing" in small datasets. Implementation Recommendations: Before patching, use a Conv1D layer (stride=2) for lightweight downsampling to stabilize training; control the number of tokens (don't make the patch too small), and implement Dropout/Label Smoothing/gradient pruning throughout the entire training process; if labels are scarce, prioritize a two-stage approach: "self-supervised (SimCLR/BYOL-A, etc.) pre-training → linear probe or ProtoNet fine-tuning". Suitable for scenarios requiring long-range structure capture, accepting higher computational power and more complex training processes, or planning to introduce pre-training.
 All models optimize sparse categorical cross-entropy with Adam/AdamW, using class-weight rebalancing to counter imbalance.
+
+---
 
 ### 3.4 Data Augmentation & Regularization
 
@@ -93,9 +109,12 @@ All models optimize sparse categorical cross-entropy with Adam/AdamW, using clas
 - SpecAugment: Applies 1–2 temporal and frequency masks.  
 - Regularization: Dropout, early stopping, learning-rate scheduling, and class weighting.
 
+---
+
 ### 3.5 Supervised Learning Objective
 We treat animal sound recognition as a **multi-class supervised classification** problem. Each audio clip inherits its label from the parent folder name (e.g., `Animals_Sounds/Training/Dog/* → label = "Dog"`). Labels are integer-encoded with `LabelEncoder`, and models predict a single class ID per clip. We use a **stratified train/validation split** to preserve class ratios. The evaluation set is kept disjoint for final reporting.
 
+---
 ### 3.6 Loss Functions
 - **Primary (baseline & enhanced 1D-CNN, AlexNet-Mel, Transformer-Mel):**
   - `sparse_categorical_crossentropy` (Keras), which expects integer class IDs and avoids building dense one-hot targets—**memory-efficient for many classes**.
@@ -105,6 +124,8 @@ We treat animal sound recognition as a **multi-class supervised classification**
   - Optional **label smoothing = 0.0–0.1** (kept at `0.0` for final numbers), to prevent over-confident logits.
   
 > Rationale: `sparse_categorical_crossentropy` is consistent across all architectures; with class weighting it directly counteracts skewed label distribution while keeping the training API uniform.
+
+---
 
 ### 3.7 Optimizer & Training Schedule
 - **Optimizer (default):** `Adam(learning_rate=1e-3, beta_1=0.9, beta_2=0.999)`.
@@ -186,13 +207,13 @@ Across all five models, the enhanced 1D-CNN clearly delivers the strongest gener
 
 ### 4.4 Practical Implications 
 - **Model complexity is not a predictor of robustness.**  
-  Transformer has the highest parameter count yet suffers the sharpest per-class variance.
+  In the current small, imbalanced regime, adding parameters widens the generalization gap: larger heads fit frequent classes aggressively while starving minority classes, which appears as sharp per-class variance and brittle confusion matrices. Bias–variance math works against deep models when label diversity is low and augmentation is modest; capacity is spent modeling noise and incidental cues (recording conditions, background hum) rather than class-defining structure. A mid-capacity 1D-CNN with BatchNorm、Dropout、early stopping, and class weighting yields smoother decision boundaries and tighter per-class F1 dispersion. Practically, prefer “more data diversity” over “more depth”: only escalate to heavier encoders after you exhaust regularization, curriculum (easy→hard sampling), and data-side improvements.
 
 - **Augmentation strategy matters more than depth.**  
-  Simply wind mixing worsens feature collapse, while controlled SNR mixing + SpecAugment restores inter-class separability.
-
-- **Enhanced 1D-CNN offers the best trade-off** — low latency, reproducible runs, and no dedicated GPU requirement.
-
+  Simply wind mixing injects uncontrolled SNR and often masks harmonics/formants, collapsing class manifolds even as the dataset grows; this explains accuracy oscillation despite “more data.” Calibrating SNR to a sane band (e.g., 10–20 dB) and keeping augmentation train-only preserves separability, while SpecAugment (time/frequency masking) adds label-preserving variability without corrupting class cues. Maintain class-balanced augmentation counts (each class sees similar augmented volume), and mix noise at the waveform level before feature extraction to keep the physics of SNR meaningful. Treat the policy as a knob to tune before touching architecture: if switching off SpecAugment or widening the SNR band changes weighted-F1 by >3–5 points, you’re augmentation-limited—not capacity-limited.
+- **Enhanced 1D-CNN offers the best trade-off**
+  With ~128-Mel/500-frame inputs, the enhanced 1D-CNN trains quickly, runs in real time on CPU, and has few hyperparameters—so results are reproducible across seeds and machines. It pairs naturally with class weighting and ReduceLROnPlateau/early stopping, giving stable convergence and the smallest macro–vs–weighted F1 gap among tested models—an empirical sign of fairness to minority classes. Operationally this means lower latency, lower energy, and simpler deployment (no GPU, smaller model files, faster cold-start). Use this as the default production path; graduate to pretrained AST/PANNs or SSL-pretrained encoders only when (i) you acquire substantially more labeled data or unlabeled audio for pretraining, (ii) per-class F1 saturates under careful augmentation, or (iii) latency/compute budgets explicitly allow a heavier backbone for marginal gains.
+  
 ---
 
 ### 4.5 Positioning vs. Small-data SOTA
