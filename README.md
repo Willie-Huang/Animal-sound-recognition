@@ -28,6 +28,8 @@ This project investigates animal-sound recognition under **small** and **imbalan
 
 To address this, we designed a calibrated pipeline: **128-bin log-Mel** features at 16 kHz, per-sample **z-normalization**, **SpecAugment**, **class-weighted loss**, and **early stopping**. Although deeper models offer higher capacity, they produced limited test gains and heavier compute demand in the small-data regime. A deliberately **mid-capacity, well-regularized 1D-CNN** achieved the most reliable accuracy–stability trade-off (~0.74 accuracy) and runs efficiently on CPU.
 
+**Research Question.** Under small and imbalanced animal-sound datasets, which combination of lightweight architectures and label-preserving augmentations delivers the best generalization–efficiency trade-off, and what is the marginal contribution of each component?
+
 ---
 
 # 2. Literature Review
