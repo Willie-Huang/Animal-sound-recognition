@@ -166,9 +166,9 @@ To investigate why overall accuracy diverges across models, per-class precision,
 Figures 1–3 compare five architectures across 12 animal classes.
 
 <p align="center">
-  <img src="image/chart1_precision_per_class.png" width="700">
-  <img src="image/chart2_recall_per_class.png" width="700">
-  <img src="image/chart3_f1_per_class.png" width="700">
+  <img src="Results/chart1_precision_per_class.png" width="700">
+  <img src="Results/chart2_recall_per_class.png" width="700">
+  <img src="Results/chart3_f1_per_class.png" width="700">
 </p>
 
 #### Key observations from Figures 1～3
@@ -192,8 +192,8 @@ The three panels reveal complementary failure modes. In precision, the Transform
 ### 4.3 Global Performance Comparison 
 
 <p align="center">
-  <img src="image/chart4_test_accuracy.png" style="max-width:100%; width:700px;" alt="Test Accuracy — Five Models"><br>
-  <img src="image/chart5_macro_vs_weighted_f1.png" style="max-width:100%; width:700px;" alt="Macro vs Weighted F1 — Five Models">
+  <img src="Results/chart4_test_accuracy.png" style="max-width:100%; width:700px;" alt="Test Accuracy — Five Models"><br>
+  <img src="Results/chart5_macro_vs_weighted_f1.png" style="max-width:100%; width:700px;" alt="Macro vs Weighted F1 — Five Models">
 </p>
 
 ####  Key observations from Figures 4～5
